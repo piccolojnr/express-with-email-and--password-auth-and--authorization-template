@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ValidationError } from '../errors/ApiErrors';
+import { ZodError } from 'zod';
 
 /**
  * Validation rule interface
@@ -235,16 +236,51 @@ export const validateRequestBody = (schema: any) => {
             schema.parse(req.body);
             next();
         } catch (error: any) {
-            if (error.errors) {
-                const validationErrors = error.errors.map((err: any) => ({
-                    field: err.path.join('.'),
-                    message: err.message,
-                }));
+            if (error instanceof ZodError) {
+                const validationErrors = error.issues.map((err: any) => {
+                    const field = err.path.length > 0 ? err.path.join('.') : 'root';
+                    
+                    // Create user-friendly error messages
+                    let message = err.message;
+                    
+                    if (err.code === 'invalid_type') {
+                        if (err.received === 'undefined') {
+                            message = `${field} is required`;
+                        } else {
+                            message = `${field} must be a ${err.expected}`;
+                        }
+                    } else if (err.code === 'too_small') {
+                        if (err.type === 'string') {
+                            message = `${field} must be at least ${err.minimum} characters long`;
+                        } else {
+                            message = `${field} must be at least ${err.minimum}`;
+                        }
+                    } else if (err.code === 'too_big') {
+                        if (err.type === 'string') {
+                            message = `${field} must be no more than ${err.maximum} characters long`;
+                        } else {
+                            message = `${field} must be no more than ${err.maximum}`;
+                        }
+                    } else if (err.code === 'invalid_string') {
+                        if (err.validation === 'email') {
+                            message = `${field} must be a valid email address`;
+                        } else if (err.validation === 'regex') {
+                            message = `${field} format is invalid`;
+                        }
+                    }
+                    
+                    return {
+                        field,
+                        message: message.charAt(0).toUpperCase() + message.slice(1)
+                    };
+                });
 
                 throw new ValidationError('Request validation failed', {
                     errors: validationErrors
                 });
             }
+            
+            // Re-throw other errors
             throw error;
         }
     };
