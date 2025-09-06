@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+    provider = "prisma-client-js"
+    output   = "../src/generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// User model - core user information
+model User {
+    id        String    @id @default(cuid())
+    email     String    @unique
+    username  String?   @unique
+    password  String // Hashed password
+    firstName String?
+    lastName  String?
+    isActive  Boolean   @default(true)
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+    lastLogin DateTime?
+
+    // Relationships
+    userRoles UserRole[]
+    sessions  Session[]
+    auditLogs AuditLog[]
+
+    @@map("users")
+}
+
+// Role model - defines permission levels (OPTIONAL - for authorization)
+model Role {
+    id          String   @id @default(cuid())
+    name        String   @unique // admin, user, moderator, etc.
+    displayName String // Admin, User, Moderator, etc.
+    description String?
+    permissions Json? // Store permissions as JSON for flexibility
+    isSystem    Boolean  @default(false) // System roles vs custom roles
+    isActive    Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relationships
+    userRoles UserRole[]
+
+    @@map("roles")
+}
+
+// Junction table for User-Role many-to-many relationship (OPTIONAL - for authorization)
+model UserRole {
+    id     String @id @default(cuid())
+    userId String
+    roleId String
+
+    createdAt DateTime @default(now())
+    createdBy String? // Who assigned this role
+
+    // Relationships
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, roleId])
+    @@map("user_roles")
+}
+
+// Session model - track user sessions and refresh tokens
+model Session {
+    id           String   @id @default(cuid())
+    userId       String
+    refreshToken String   @unique
+    accessToken  String? // Optional: store if needed for blacklisting
+    userAgent    String?
+    ipAddress    String?
+    expiresAt    DateTime
+    isRevoked    Boolean  @default(false)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    // Relationships
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("sessions")
+}
+
+// Audit log model - track user activities (OPTIONAL - for authorization and monitoring)
+model AuditLog {
+    id        String   @id @default(cuid())
+    userId    String? // Nullable in case of system actions
+    action    String // login, logout, create_user, update_profile, etc.
+    resource  String? // What was acted upon
+    details   Json? // Additional context
+    ipAddress String?
+    userAgent String?
+    createdAt DateTime @default(now())
+
+    // Relationships
+    user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+    @@map("audit_logs")
+}

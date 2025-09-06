@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths": {
+      "@src/*": ["src/*"],
+      "@utils/*": ["src/common/utils/*"],
+      "@constants/*": ["src/common/constants/*"],
+      "@errors/*": ["src/common/errors/*"],
+      "@middlewares/*": ["src/common/middlewares/*"],
+      "@routes/*": ["src/routes/*"]
+    },
+
+    // Module System
+    "module": "commonjs", // 👈 use CJS instead of nodenext
+    "target": "es2020", // or esnext, but CJS modules
+    "esModuleInterop": true, // allows default imports from CJS libs
+    "resolveJsonModule": true, // if you import JSON configs
+    "moduleResolution": "node", // standard Node resolution
+    "types": ["node"], // include Node types
+
+    // Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Strictness
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Style / Checks
+    "isolatedModules": false, // not needed in CJS
+    "skipLibCheck": true
+  }
+}
